@@ -1,10 +1,14 @@
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-
+import sys
 from agent import understand_email
 from scheduler import find_common_slots, create_meeting_event
 from graph_auth import result
-from graph_mail import get_latest_email, send_confirmation_email
+from graph_mail import (
+    get_latest_email,
+    get_email_by_id,
+    send_confirmation_email
+)
 from graph_calendar import (
     get_calendar_events,
     get_shared_calendar_events,
@@ -50,7 +54,11 @@ access_token = result["access_token"]
 print("\nREADING OUTLOOK EMAIL")
 print("---------------------")
 
-email = get_latest_email(access_token)
+if len(sys.argv) > 1:
+    message_id = sys.argv[1]
+    email = get_email_by_id(access_token, message_id)
+else:
+    email = get_latest_email(access_token)
 
 if not email:
     print("No meeting-request email found.")

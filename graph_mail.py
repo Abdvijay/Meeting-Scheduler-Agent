@@ -101,3 +101,46 @@ def send_confirmation_email(access_token, recipient, subject, body):
     print(response.text)
 
     return False
+
+
+def get_email_by_id(access_token, message_id):
+
+    url = f"https://graph.microsoft.com/v1.0/me/messages/{message_id}"
+
+    response = requests.get(
+        url,
+        headers={
+            "Authorization": f"Bearer {access_token}"
+        },
+        params={
+            "$select": "id,subject,from,toRecipients,bodyPreview,receivedDateTime"
+        },
+        timeout=30
+    )
+
+    if response.status_code != 200:
+        print("Failed to read notified email:", response.status_code)
+        print(response.text)
+        return None
+
+    message = response.json()
+
+    sender = (
+        message.get("from", {})
+        .get("emailAddress", {})
+        .get("address", "")
+    )
+
+    recipients = message.get("toRecipients", [])
+    recipient = (
+        recipients[0].get("emailAddress", {}).get("address", "")
+        if recipients else ""
+    )
+
+    return {
+        "id": message.get("id"),
+        "from": sender,
+        "to": recipient,
+        "subject": message.get("subject") or "",
+        "body": message.get("bodyPreview") or ""
+    }
