@@ -4,6 +4,9 @@ import subprocess
 import sys
 import os
 
+from graph_auth import result
+from graph_mail import get_email_by_id
+
 app = Flask(__name__)
 
 CLIENT_STATE = "meeting-scheduler-test"
@@ -40,15 +43,36 @@ def webhook():
             print("Duplicate notification ignored:", message_id)
             continue
 
+        email = get_email_by_id(
+            result["access_token"],
+            message_id
+        )
+
+        if not email:
+            print("Could not read notified email. Skipping.")
+            continue
+
+        subject = email.get("subject", "").strip().lower()
+
+        if subject.startswith("meeting scheduled"):
+            print("Confirmation email detected. Skipping scheduler.")
+            processed_ids.add(message_id)
+            continue
+
         processed_ids.add(message_id)
 
-        print("\nNew email notification received.")
+        print("\nNew meeting-request email notification received.")
+        print("Subject:", email.get("subject"))
         print("Message ID:", message_id)
         print("Starting meeting scheduler...")
 
         try:
             subprocess.Popen(
-                [PYTHON, os.path.join(PROJECT_DIR, "main.py"), message_id],
+                [
+                    PYTHON,
+                    os.path.join(PROJECT_DIR, "main.py"),
+                    message_id
+                ],
                 cwd=PROJECT_DIR
             )
         except Exception as error:
